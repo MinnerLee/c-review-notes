@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="中文 C11 复习站。查语法、做自测，逐步看懂指针、递归和算法题。">
+  <meta name="theme-color" content="#f7f8f2">
+  <title>C 语言复习手册</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="content.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">跳至正文</a>
+  <header class="topbar">
+    <div class="top-inner">
+      <button class="icon-button mobile-menu" id="menu-button" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="打开章节目录">☰</button>
+      <a class="brand" href="#home"><span class="brand-mark" aria-hidden="true">C.</span><span>C 语言复习手册</span></a>
+      <div class="top-actions">
+        <button class="search-trigger" id="search-button" type="button"><span aria-hidden="true">⌕</span> <span>搜索</span><kbd>/</kbd></button>
+        <button class="icon-button" id="theme-button" type="button" aria-label="切换深色模式" aria-pressed="false">◐</button>
+        <a class="github-link" href="https://github.com/MinnerLee/c-review-notes">GitHub</a>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <aside id="sidebar" class="sidebar" aria-label="章节目录"></aside>
+    <main id="main" tabindex="-1"></main>
+    <aside id="outline" class="outline" aria-label="本页目录"></aside>
+  </div>
+  <dialog id="search-dialog" aria-labelledby="search-label">
+    <div class="search-head">
+      <label class="visually-hidden" for="search-input" id="search-label">搜索章节与知识点</label>
+      <input id="search-input" type="search" placeholder="搜索 fgets、指针、汉诺塔…" autocomplete="off">
+      <button class="icon-button" id="search-close" type="button" aria-label="关闭搜索">×</button>
+    </div>
+    <div id="search-results" class="search-results" aria-live="polite"></div>
+  </dialog>
+  <noscript>请启用 JavaScript 以显示手册正文与练习。</noscript>
+</body>
+</html>
