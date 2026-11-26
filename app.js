@@ -87,12 +87,12 @@ const homeSections = [
 ];
 
 function drawHome() {
-  const example = htmlEscape('#include <stdio.h>\n\nint main(void) {\n    puts("Hello, C!");\n    return 0;\n}');
+  const example = htmlEscape('#include <stdio.h>\n\nint main(void) {\n    int ch;\n    while ((ch = getchar()) != EOF)\n        putchar(ch);\n    return 0;\n}');
   main.innerHTML = `
     <section class="hero">
       <div>
-        <h1>C 语言复习手册</h1>
-        <p>从语法和输入输出复习到指针、递归与算法。代码可以直接复制，考点可以随时自测。</p>
+        <h1>C 语言<span>复习手册</span></h1>
+        <p>从输入输出复习到指针、递归和算法。读完一个知识点，就用代码例子或自测检查理解。</p>
         <div class="hero-actions">
           <a class="button primary" href="#basics">开始复习</a>
           <a class="button" href="#home/detailed-library">查专题详解</a>
@@ -100,7 +100,7 @@ function drawHome() {
         </div>
       </div>
       <div class="hero-example" aria-label="C 语言示例">
-        <div class="hero-example-label">hello.c</div><pre><code>${example}</code></pre>
+        <div class="hero-example-label">echo.c</div><pre><code>${example}</code></pre>
       </div>
     </section>
     <section class="home-section" id="chapter-list">
@@ -165,6 +165,11 @@ function drawRoute() {
   const [id, section] = location.hash.slice(1).split('/');
   const chapter = byId.get(id);
   const active = chapter?.id ?? 'home';
+  const routeGroup = active === 'exam' ? 'exam' : active.startsWith('notes-') || section === 'detailed-library' ? 'notes' : active !== 'home' || section === 'chapter-list' ? 'review' : '';
+  document.querySelectorAll('.top-nav a').forEach((link) => {
+    if (link.dataset.nav === routeGroup) link.setAttribute('aria-current', 'true');
+    else link.removeAttribute('aria-current');
+  });
   document.title = chapter ? chapter.title + ' · C 语言复习手册' : 'C 语言复习手册';
   const sections = chapter?.sections ?? homeSections;
   if (active !== visibleChapter) {

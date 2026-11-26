@@ -34,5 +34,6 @@ npm run build
 ## 参考
 
 - 阅读结构参考 [labuladong 的算法笔记](https://labuladong.online/zh/algo/home/)。
+- 深蓝配色、纸面层次和当前项强调参考 [学有据](https://github.com/MinnerLee/xueyouju-web)。
 - C11 规则参考 [WG14 N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
 - 哥德巴赫分解示例对应 [洛谷 P1304](https://www.luogu.com.cn/problem/P1304)。
