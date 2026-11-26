@@ -9,7 +9,12 @@ const theme = select('theme-button');
 const dialog = select('search-dialog');
 const input = select('search-input');
 const results = select('search-results');
-const byId = new Map(lessons.map((chapter) => [chapter.id, chapter]));
+const chapters = [...lessons, ...detailedLessons];
+const chapterGroups = [
+  ...lessonGroups,
+  { title: '专题详解', chapters: detailedLessons.map((chapter) => chapter.id) }
+];
+const byId = new Map(chapters.map((chapter) => [chapter.id, chapter]));
 
 const readKey = 'c-review-notes.read.v1';
 const themeKey = 'c-review-notes.theme.v1';
@@ -67,17 +72,21 @@ document.querySelector('.skip').addEventListener('click', (event) => {
 function drawSidebar(activeId) {
   const link = (id, label) => `<a href="#${id}"${id === activeId ? ' aria-current="page"' : ''}>${label}${progress.has(id) ? '<span class="state" aria-label="已复习">✓</span>' : ''}</a>`;
   sidebar.innerHTML = `<nav>${link('home', '复习首页')}
-    ${lessonGroups.map((group) => `<div class="rail-label">${group.title}</div>${group.chapters.map((id) => link(id, byId.get(id).title)).join('')}`).join('')}
+    ${chapterGroups.map((group) => `<div class="rail-label">${group.title}</div>${group.chapters.map((id) => link(id, byId.get(id).title)).join('')}`).join('')}
   </nav>`;
 }
 
-function drawOutline(chapterId, sections, active) {
-  outline.innerHTML = `<div class="outline-label">本页内容</div><nav>${sections.map((item) =>
-    `<a href="#${chapterId}/${item.id}"${item.id === active ? ' aria-current="location"' : ''}>${item.title}</a>`
-  ).join('')}</nav>`;
+function outlineLinks(chapterId, sections) {
+  return sections.map((item) => `<a href="#${chapterId}/${item.id}">${htmlEscape(item.title)}</a>`).join('');
 }
 
-function drawHome(activeSection) {
+const homeSections = [
+  { id: 'chapter-list', title: '快速复习' },
+  { id: 'detailed-library', title: '专题详解' },
+  { id: 'quick-links', title: '常查知识点' },
+];
+
+function drawHome() {
   const example = htmlEscape('#include <stdio.h>\n\nint main(void) {\n    puts("Hello, C!");\n    return 0;\n}');
   main.innerHTML = `
     <section class="hero">
@@ -86,6 +95,7 @@ function drawHome(activeSection) {
         <p>从语法和输入输出复习到指针、递归与算法。代码可以直接复制，考点可以随时自测。</p>
         <div class="hero-actions">
           <a class="button primary" href="#basics">开始复习</a>
+          <a class="button" href="#home/detailed-library">查专题详解</a>
           <a class="button" href="#exam/quiz">做期中自测</a>
         </div>
       </div>
@@ -94,8 +104,15 @@ function drawHome(activeSection) {
       </div>
     </section>
     <section class="home-section" id="chapter-list">
-      <h2>章节目录</h2><p class="progress-text">已复习 ${progress.size} / ${lessons.length} 章</p>
+      <h2>快速复习</h2><p class="progress-text">已复习 ${progress.size} / ${chapters.length} 章</p>
       <div class="chapter-grid">${lessons.map((chapter) => `
+        <a class="chapter-card" href="#${chapter.id}"><h3>${chapter.title}${progress.has(chapter.id) ? ' ✓' : ''}</h3><p>${chapter.summary}</p></a>
+      `).join('')}</div>
+    </section>
+    <section class="home-section" id="detailed-library">
+      <h2>专题详解</h2>
+      <p>收录 C 语言笔记中的完整章节、练习代码和递归调用图。</p>
+      <div class="chapter-grid">${detailedLessons.map((chapter) => `
         <a class="chapter-card" href="#${chapter.id}"><h3>${chapter.title}${progress.has(chapter.id) ? ' ✓' : ''}</h3><p>${chapter.summary}</p></a>
       `).join('')}</div>
     </section>
@@ -103,18 +120,21 @@ function drawHome(activeSection) {
       <h2>常查知识点</h2>
       <div class="hero-actions"><a class="button" href="#io/fgets">fgets 行边界</a><a class="button" href="#recursion/hanoi">汉诺塔演示</a><a class="button" href="#primes/goldbach">P1304 题解</a></div>
     </section>`;
-  drawOutline('home', [{ id: 'chapter-list', title: '章节目录' }, { id: 'quick-links', title: '常查知识点' }], activeSection);
 }
 
-function drawChapter(chapter, activeSection) {
-  const position = lessons.indexOf(chapter);
-  const last = lessons[position - 1];
-  const next = lessons[position + 1];
+function drawChapter(chapter) {
+  const collection = chapter.id.startsWith('notes-') ? detailedLessons : lessons;
+  const position = collection.indexOf(chapter);
+  const last = collection[position - 1];
+  const next = collection[position + 1];
+  const locationLabel = collection === detailedLessons
+    ? '<a href="#home/detailed-library">专题详解</a>' : '<a href="#home">复习首页</a>';
 
   main.innerHTML = `<article class="article">
-    <div class="breadcrumb"><a href="#home">复习首页</a> / ${chapter.title}</div>
+    <div class="breadcrumb">${locationLabel} / ${htmlEscape(chapter.title)}</div>
     <h1>${chapter.title}</h1><p class="lede">${chapter.summary}</p>
-    <div class="article-body">${chapter.sections.map((item) => `<section id="${item.id}"><h2>${item.title}</h2>${item.body}</section>`).join('')}</div>
+    <details class="mobile-outline"><summary>本章目录</summary><nav aria-label="本章目录">${outlineLinks(chapter.id, chapter.sections)}</nav></details>
+    <div class="article-body">${chapter.sections.map((item) => `<section id="${item.id}"><h2>${htmlEscape(item.title)}</h2>${item.body}</section>`).join('')}</div>
     <div class="article-footer">
       ${last ? `<a href="#${last.id}">上一篇 · ${last.title}</a>` : '<a href="#home">返回首页</a>'}
       <button class="button" type="button" id="mark-complete"></button>
@@ -136,19 +156,29 @@ function drawChapter(chapter, activeSection) {
     drawSidebar(chapter.id);
   });
   showProgress();
-  drawOutline(chapter.id, chapter.sections, activeSection);
   if (chapter.id === 'recursion') mountHanoi();
   if (chapter.id === 'exam') mountQuiz();
 }
 
+let visibleChapter;
 function drawRoute() {
   const [id, section] = location.hash.slice(1).split('/');
   const chapter = byId.get(id);
   const active = chapter?.id ?? 'home';
   document.title = chapter ? chapter.title + ' · C 语言复习手册' : 'C 语言复习手册';
-  drawSidebar(active);
-  if (chapter) drawChapter(chapter, section);
-  else drawHome(section);
+  const sections = chapter?.sections ?? homeSections;
+  if (active !== visibleChapter) {
+    drawSidebar(active);
+    if (chapter) drawChapter(chapter);
+    else drawHome();
+    outline.innerHTML = `<div class="outline-label">本页内容</div><nav>${outlineLinks(active, sections)}</nav>`;
+    visibleChapter = active;
+  }
+  const parent = sections.find((item) => item.id === section || item.subsections?.some((nested) => nested.id === section));
+  outline.querySelectorAll('a').forEach((link) => {
+    if (parent && link.getAttribute('href') === '#' + active + '/' + parent.id) link.setAttribute('aria-current', 'location');
+    else link.removeAttribute('aria-current');
+  });
   setMenu(false);
   const destination = section && select(section);
   if (destination && main.contains(destination)) destination.scrollIntoView();
@@ -255,12 +285,13 @@ function plainText(html) {
   template.innerHTML = html;
   return template.content.textContent.trim().replace(/\s+/g, ' ');
 }
-const searchIndex = lessons.flatMap((chapter) => [
+const searchIndex = chapters.flatMap((chapter) => [
   { url: '#' + chapter.id, title: chapter.title, subtitle: chapter.summary, text: chapter.summary },
-  ...chapter.sections.map((item) => ({
-    url: '#' + chapter.id + '/' + item.id,
-    title: item.title, subtitle: chapter.title, text: plainText(item.body)
-  }))
+  ...chapter.sections.flatMap((item) => [{
+    url: '#' + chapter.id + '/' + item.id, title: item.title, subtitle: chapter.title, text: plainText(item.body)
+  }, ...(item.subsections ?? []).map((nested) => ({
+    url: '#' + chapter.id + '/' + nested.id, title: nested.title, subtitle: chapter.title + ' · ' + item.title, text: ''
+  }))])
 ]);
 
 function drawSearch() {

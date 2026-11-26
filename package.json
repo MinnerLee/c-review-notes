@@ -1,0 +1,12 @@
+{
+  "name": "c-review-notes",
+  "version": "1.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-library.mjs",
+    "import-notes": "node scripts/import-notes.mjs"
+  },
+  "devDependencies": {
+    "markdown-it": "15.0.3"
+  }
+}
