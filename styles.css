@@ -163,6 +163,30 @@ th { background: var(--rail); }
 .hanoi-actions { display: flex; gap: .5rem; justify-content: center; margin-top: .8rem; }
 
 .quiz { display: grid; gap: .7rem; }
+.exam-toolbar, .exam-actions, .exam-jump { display: flex; flex-wrap: wrap; gap: .65rem 1rem; }
+.exam-toolbar { border: 1px solid var(--line); border-left: 3px solid var(--coral); border-radius: 5px 12px 5px 12px; background: var(--rail); padding: .75rem 1rem; }
+.exam-toolbar label { display: flex; align-items: center; gap: .5rem; font-size: .9rem; font-weight: 650; }
+.exam-toolbar select, .exam-input, .sample-check textarea { min-height: 40px; max-width: 100%; border: 1px solid var(--line); border-radius: 5px; padding: .4rem .6rem; font: inherit; color: var(--ink); background: var(--surface); }
+.exam-actions { align-items: center; justify-content: space-between; margin: .65rem 0; }
+.article .exam-jump { list-style: none; padding-left: 0; }
+.exam-jump a { display: inline-block; padding: .22rem .62rem; background: var(--accent-soft); border: 1px solid var(--line); border-radius: 5px; font-size: .9rem; }
+.exam-question { min-width: 0; }
+.exam-question legend { overflow-wrap: anywhere; }
+.exam-question .exam-option { display: flex; align-items: baseline; gap: .5rem; }
+.exam-option input { flex: 0 0 auto; }
+.exam-option span { overflow-wrap: anywhere; }
+.exam-type, .exam-reference { color: var(--muted); font-size: .85rem; }
+.exam-input { display: block; width: min(100%, 22rem); margin: .45rem 0; }
+.exam-check { min-height: 34px; margin-top: .45rem; }
+.exam-question .feedback, .sample-check .feedback { margin-top: .55rem; }
+.exam-submit { justify-self: start; }
+.exam-empty { background: var(--rail); padding: .75rem 1rem; border-radius: 5px; }
+.sample-check { border: 1px solid var(--line); border-left: 3px solid var(--accent); background: var(--rail); border-radius: 5px 12px 5px 12px; padding: .65rem 1rem; margin: .8rem 0; }
+.sample-check label { display: grid; gap: .25rem; margin: .6rem 0; }
+.sample-check textarea { width: 100%; resize: vertical; font-family: ui-monospace, Consolas, monospace; }
+.exam-case { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: .65rem; margin: .65rem 0; }
+.exam-case > div { min-width: 0; }
+.exam-case .tree { margin-block: .2rem; }
 .question { margin: 0; padding: .8rem 1rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 .question legend { font-weight: 700; padding: 0 .3rem; }
 .question label { display: block; cursor: pointer; padding: .18rem 0; }

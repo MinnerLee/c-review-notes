@@ -9,7 +9,8 @@ const theme = select('theme-button');
 const dialog = select('search-dialog');
 const input = select('search-input');
 const results = select('search-results');
-const chapters = [...lessons, ...detailedLessons];
+const reviewLessons = [...lessons, examChapter];
+const chapters = [...reviewLessons, ...detailedLessons];
 const chapterGroups = [
   ...lessonGroups,
   { title: '专题详解', chapters: detailedLessons.map((chapter) => chapter.id) }
@@ -96,7 +97,7 @@ function drawHome() {
         <div class="hero-actions">
           <a class="button primary" href="#basics">开始复习</a>
           <a class="button" href="#home/detailed-library">查专题详解</a>
-          <a class="button" href="#exam/quiz">做期中自测</a>
+          <a class="button" href="#exam/quiz">做考试自测</a>
         </div>
       </div>
       <div class="hero-example" aria-label="C 语言示例">
@@ -105,7 +106,7 @@ function drawHome() {
     </section>
     <section class="home-section" id="chapter-list">
       <h2>快速复习</h2><p class="progress-text">已复习 ${progress.size} / ${chapters.length} 章</p>
-      <div class="chapter-grid">${lessons.map((chapter) => `
+      <div class="chapter-grid">${reviewLessons.map((chapter) => `
         <a class="chapter-card" href="#${chapter.id}"><h3>${chapter.title}${progress.has(chapter.id) ? ' ✓' : ''}</h3><p>${chapter.summary}</p></a>
       `).join('')}</div>
     </section>
@@ -123,7 +124,7 @@ function drawHome() {
 }
 
 function drawChapter(chapter) {
-  const collection = chapter.id.startsWith('notes-') ? detailedLessons : lessons;
+  const collection = chapter.id.startsWith('notes-') ? detailedLessons : reviewLessons;
   const position = collection.indexOf(chapter);
   const last = collection[position - 1];
   const next = collection[position + 1];
@@ -157,7 +158,10 @@ function drawChapter(chapter) {
   });
   showProgress();
   if (chapter.id === 'recursion') mountHanoi();
-  if (chapter.id === 'exam') mountQuiz();
+  if (chapter.id === 'exam') {
+    mountQuiz();
+    mountSampleChecks(main.querySelector('.article-body'));
+  }
 }
 
 let visibleChapter;
@@ -251,38 +255,6 @@ function mountHanoi() {
   previous.addEventListener('click', () => { if (step > 0) { step--; draw(); } });
   next.addEventListener('click', () => { if (step < moves.length) { step++; draw(); } });
   draw();
-}
-
-const responses = new Map();
-function mountQuiz() {
-  const quiz = select('quiz');
-  quiz.innerHTML = '<div class="progress-text" id="quiz-score" aria-live="polite"></div>' +
-    quizQuestions.map(([question, options], index) => `
-      <fieldset class="question"><legend>${index + 1}. ${htmlEscape(question)}</legend>
-        ${options.map((option, choice) => `<label><input type="radio" name="q${index}" data-index="${index}" value="${choice}"${responses.get(index) === choice ? ' checked' : ''}> ${htmlEscape(option)}</label>`).join('')}
-        <div class="feedback" aria-live="polite"></div>
-      </fieldset>`).join('');
-
-  function showAnswer(index) {
-    const answer = responses.get(index);
-    const [, options, correct, reason] = quizQuestions[index];
-    const feedback = quiz.querySelectorAll('.feedback')[index];
-    feedback.dataset.correct = String(answer === correct);
-    feedback.textContent = (answer === correct ? '答对了。' : '正确选项是「' + options[correct] + '」。') + reason;
-  }
-  function updateScore() {
-    const count = [...responses].filter(([index, value]) => quizQuestions[index][2] === value).length;
-    select('quiz-score').textContent = `已答 ${responses.size} / ${quizQuestions.length} 题 · 答对 ${count} 题`;
-  }
-
-  responses.forEach((_, index) => showAnswer(index));
-  updateScore();
-  quiz.addEventListener('change', (event) => {
-    const index = Number(event.target.dataset.index);
-    responses.set(index, Number(event.target.value));
-    showAnswer(index);
-    updateScore();
-  });
 }
 
 function plainText(html) {

@@ -179,20 +179,6 @@ dfs(0, 0) 标记起点
         <p>越界、不同色或已访问时返回 0。成功进入一个格子时先记 1，再把四个方向的返回值加起来。消除星星的块大小是 <code>count</code>，满足题设的至少两颗时，用 <code>5 * count * count</code> 与历史最高分比较。</p>
       `)
     ]
-  },
-  {
-    id: 'exam', title: '期中复习与自测', summary: '核心概念、12 道单选和 10 道简答。',
-    sections: [
-      lesson('review', '复习范围与概念检查', `
-        <p>按课程复习材料梳理绪论、语言概述、C 语法、计算方法和函数基础。顺序、选择、循环是三类基本控制结构。做算法简答时，写清初值、条件、每轮操作和状态更新。</p>
-        <p>半加器的本位和是 <code>A XOR B</code>，进位是 <code>A AND B</code>。全加器再加入低位进位 <code>Cin</code>，本位和为 <code>A XOR B XOR Cin</code>，三个输入中至少两个为 1 时进位。</p>
-        <p>常用算法描述方式包括自然语言、传统流程图、N-S 盒图、伪代码和程序代码。讲解结构化方法时，可以用「拆分任务、细化步骤、写出边界」组织回答。</p>
-      `),
-      lesson('quiz', '单选自测', '<div id="quiz" class="quiz"></div>'),
-      lesson('short-answers', '简答自测', '<p>先自己口述一遍，再展开作答要点。</p>' + shortAnswers.map(([question, answer]) =>
-        '<details><summary>' + htmlEscape(question) + '</summary><p>' + htmlEscape(answer) + '</p></details>'
-      ).join(''))
-    ]
   }
 ];
 
