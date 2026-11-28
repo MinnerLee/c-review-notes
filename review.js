@@ -1,5 +1,5 @@
-/* Short representative exercises, with links to their original patterns. */
-const reviewPatterns = [
+/* Existing worked examples keep their stable anchors. */
+const legacyReviewPatterns = [
   {
     id: 'line-input', title: '整行输入与换行', cue: '题目要求保留空格，或者数字之后还要读一整行。',
     method: '先确定读取单位。检查 fgets 的返回值，只在需要时移除行末换行。',
@@ -57,74 +57,182 @@ const reviewPatterns = [
   }
 ];
 
-const patternModes = [
-  ['explain', '讲解'],
-  ['practice', '只做题'],
-  ['reference', '方法速查']
+
+const reviewPatterns = [
+  ...legacyReviewPatterns.map((pattern) => ({ ...pattern, topic: legacyReviewMetadata[pattern.id][0] })),
+  ...reviewTopicDefinitions.map(([id, title, topic, cue, method, prompt, steps, answer, pitfall, , diagram]) =>
+    ({ id, title, topic, cue, method, prompt, steps, answer, pitfall, diagram }))
 ];
 
-function patternDetails(pattern) {
-  return `
-    <div class="review-problem"><h3>代表题</h3><p>${htmlEscape(pattern.prompt)}</p></div>
-    <div class="review-solution">
-      <h3>解题过程</h3>
-      ${pattern.diagram ? tree(pattern.diagram) : ''}
-      <ol>${pattern.steps.map((step) => `<li>${htmlEscape(step)}</li>`).join('')}</ol>
-      <p class="review-answer"><strong>结论</strong> ${htmlEscape(pattern.answer)}</p>
-      <p class="review-warning"><strong>易错点</strong> ${htmlEscape(pattern.pitfall)}</p>
-    </div>
-    <p class="review-source"><span>${htmlEscape(pattern.source)}</span> <a href="${pattern.href}">回查讲义或题解</a></p>
-    <label class="review-mastered"><input type="checkbox" data-mastered="${pattern.id}"> 已掌握</label>`;
-}
-
 const patternChapter = {
-  id: 'patterns', title: '题型复习', summary: '先认出题型，再选方法。可以只做题、看完整推导或考前速查。',
-  sections: [
-    lesson('map', '题型地图', `
-      <div class="review-toolbar">
-        <div class="review-modes" aria-label="复习模式" role="group">
-          ${patternModes.map(([mode, label]) => `<button class="button" type="button" data-review-mode="${mode}" aria-pressed="false">${label}</button>`).join('')}
-        </div>
-        <div class="review-tools"><span id="mastery-count" role="status"></span><button class="button" id="review-print" type="button">打印讲义</button></div>
-      </div>
-      <div class="table-wrap"><table>
-        <thead><tr><th scope="col">题型</th><th scope="col">识别线索</th><th scope="col">核心方法</th></tr></thead>
-        <tbody>${reviewPatterns.map((pattern) => `<tr><th scope="row"><a href="#patterns/${pattern.id}">${pattern.title}</a></th><td>${pattern.cue}</td><td>${pattern.method}</td></tr>`).join('')}</tbody>
-      </table></div>`),
-    ...reviewPatterns.map((pattern) => lesson(pattern.id, pattern.title, patternDetails(pattern)))
-  ]
+  id: 'patterns',
+  title: '题型复习',
+  summary: '按知识块查解法、例题推导和易错点。',
+  sections: [lesson('map', '题型目录', ''), ...reviewPatterns.map((pattern) =>
+    lesson(pattern.id, pattern.title, [pattern.cue, pattern.method, pattern.pitfall].map(htmlEscape).join(' ')))]
 };
 
-function mountPatternReview() {
+function mountPatternReview(root, bank) {
+  const questions = new Map(bank.map((question) => [question.id, question]));
   const savedKey = 'c-review-notes.pattern-mastery.v1';
   let saved = [];
   try { saved = JSON.parse(getPreference(savedKey) ?? '[]'); } catch { /* Start with no saved marks. */ }
   const mastered = new Set(reviewPatterns.map(({ id }) => id).filter((id) => Array.isArray(saved) && saved.includes(id)));
-  const article = main.querySelector('.article');
-  const switches = [...article.querySelectorAll('[data-review-mode]')];
-  const markings = [...article.querySelectorAll('[data-mastered]')];
+  const groups = examTopics.map(([id, title, notes]) => ({
+    id, title, notes, patterns: reviewPatterns.filter((pattern) => pattern.topic === id)
+  }));
+  const practiceUrl = (pattern) => 'exam.html?pattern=' + encodeURIComponent(pattern.id);
+  const scopeLinks = groups.map(({ id, title }) =>
+    `<a href="#topic-${id}">${htmlEscape(title)}</a>`).join('');
 
-  function setMode(mode) {
-    article.dataset.reviewMode = mode;
-    for (const button of switches) button.setAttribute('aria-pressed', String(button.dataset.reviewMode === mode));
-    for (const card of article.querySelectorAll('.review-problem')) card.hidden = mode === 'reference';
-    for (const lesson of article.querySelectorAll('.review-solution')) lesson.hidden = mode !== 'explain';
+  function getQuestions(pattern) {
+    return reviewQuestionIdsByPattern.get(pattern.id).map((id) => questions.get(id));
   }
+
+  function questionLabel(question) {
+    return question.title || question.prompt.split('\n')[0];
+  }
+
+  function questionList(pattern, entries) {
+    if (!entries.length) return '';
+    const count = entries.filter((question) => !question.sourceMissing).length;
+    return `<section class="pattern-questions">
+      <h3>相关题目 <span>${entries.length} 道</span></h3>
+      <ul>${entries.map((question) => {
+        const metadata = [examQuestionTypes[question.type], question.paper
+          ? question.paper.title + ' · ' + question.location
+          : question.source ? examSourceById[question.source].title + ' · 同考点练习' : '站内练习'];
+        if (question.sourceMissing) metadata.push('题图暂缺');
+        return `<li>
+          <a href="${practiceUrl(pattern)}&amp;question=${encodeURIComponent(question.id)}">${htmlEscape(questionLabel(question))}</a>
+          <small>${htmlEscape(metadata.join(' · '))}</small>
+        </li>`;
+      }).join('')}</ul>
+      ${count ? `<a class="button" href="${practiceUrl(pattern)}">在自测页练这类题 →</a>` : ''}
+    </section>`;
+  }
+
+  function patternMarkup(pattern, generalNotes) {
+    const entries = getQuestions(pattern);
+    const example = pattern.source
+      ? `<p class="review-source">${htmlEscape(pattern.source)}</p>`
+      : '';
+    return `<details class="pattern-entry" id="${pattern.id}" data-pattern="${pattern.id}">
+      <summary>
+        <span class="pattern-entry-title">${htmlEscape(pattern.title)}</span>
+        <span class="pattern-entry-count">${entries.length ? entries.length + ' 道相关题' : '专题例题'}</span>
+        <span class="pattern-entry-cue">${htmlEscape(pattern.cue)}</span>
+        <span class="review-card-method">${htmlEscape(pattern.method)}</span>
+      </summary>
+      <div class="pattern-body">
+        <p class="review-warning"><strong>易错点</strong> ${htmlEscape(pattern.pitfall)}</p>
+        <section class="pattern-example">
+          <h3>例题与推导</h3>
+          <p>${htmlEscape(pattern.prompt)}</p>
+          ${pattern.diagram ? tree(pattern.diagram) : ''}
+          <ol>${pattern.steps.map((step) => `<li>${htmlEscape(step)}</li>`).join('')}</ol>
+          <p class="review-answer"><strong>结论</strong> ${htmlEscape(pattern.answer)}</p>
+          ${example}
+        </section>
+        ${questionList(pattern, entries)}
+        <div class="pattern-footer">
+          <label class="review-mastered"><input type="checkbox" data-mastered="${pattern.id}"> 已掌握</label>
+          <a href="index.html${pattern.href || generalNotes}">回查知识讲义</a>
+        </div>
+      </div>
+    </details>`;
+  }
+
+  root.innerHTML = `<div class="pattern-layout">
+    <aside class="pattern-sidebar" aria-label="题型目录">
+      <nav><a href="#map">全部题型</a>${scopeLinks}</nav>
+    </aside>
+    <article class="article pattern-guide">
+      <header id="map" class="pattern-header">
+        <h1>题型复习</h1>
+        <p class="lede">先认题型，再看怎么推。按知识块回看解法和易错点，遇到同类题可以去考试自测练习。</p>
+        <div class="pattern-overview">
+          <span><strong>${groups.length}</strong> 个知识块</span><span><strong>${reviewPatterns.length}</strong> 个题型专题</span>
+          <span><strong>${bank.length}</strong> 道关联题</span><span id="mastery-count" role="status"></span>
+        </div>
+      </header>
+      <div class="review-toolbar">
+        <label class="pattern-search"><span>搜索题型</span><input id="pattern-search" type="search" placeholder="例如补码、归并、链表" autocomplete="off"></label>
+        <button id="review-print" class="button" type="button">打印复习讲义</button>
+        <p id="pattern-results" class="progress-text" role="status"></p>
+      </div>
+      <details class="pattern-mobile-nav"><summary>知识块目录</summary><nav aria-label="移动端知识块目录">${scopeLinks}</nav></details>
+      ${groups.map(({ id, title, notes, patterns }) => `<section class="pattern-group" id="topic-${id}" data-pattern-group="${id}">
+        <header><h2>${htmlEscape(title)}</h2><span>${patterns.length} 个专题</span></header>
+        <div class="pattern-entries">${patterns.map((pattern) => patternMarkup(pattern, notes)).join('')}</div>
+      </section>`).join('')}
+    </article>
+  </div>`;
+
+  const search = select('pattern-search');
+  const status = select('pattern-results');
+  const cards = new Map([...root.querySelectorAll('[data-pattern]')].map((card) => [card.dataset.pattern, card]));
+  const blocks = [...root.querySelectorAll('[data-pattern-group]')];
+  const haystacks = reviewPatterns.map((pattern) => [pattern.id, [
+    pattern.title, pattern.cue, pattern.method, pattern.pitfall, pattern.prompt, ...pattern.steps,
+    topicTitle(pattern.topic), ...getQuestions(pattern).map(questionLabel)
+  ].join(' ').normalize('NFKC').toLowerCase()]);
 
   function updateMastery() {
     select('mastery-count').textContent = `已掌握 ${mastered.size} / ${reviewPatterns.length}`;
-    for (const checkbox of markings) checkbox.checked = mastered.has(checkbox.dataset.mastered);
+    for (const input of root.querySelectorAll('[data-mastered]')) input.checked = mastered.has(input.dataset.mastered);
   }
 
-  for (const button of switches) button.addEventListener('click', () => setMode(button.dataset.reviewMode));
-  for (const checkbox of markings) checkbox.addEventListener('change', () => {
-    const id = checkbox.dataset.mastered;
-    if (checkbox.checked) mastered.add(id);
-    else mastered.delete(id);
+  function filter() {
+    const query = search.value.trim();
+    const words = query.normalize('NFKC').toLowerCase().split(/\s+/).filter(Boolean);
+    let matches = 0;
+    for (const [id, haystack] of haystacks) {
+      const card = cards.get(id);
+      card.hidden = !words.every((word) => haystack.includes(word));
+      if (!card.hidden) matches++;
+    }
+    for (const block of blocks) block.hidden = !block.querySelector('.pattern-entry:not([hidden])');
+    status.textContent = query ? (matches ? `找到 ${matches} 个专题` : '没有匹配的题型。') : '';
+  }
+
+  function followHash() {
+    const id = location.hash.slice(1) || 'map';
+    const destination = id && select(id);
+    if (!destination || !root.contains(destination)) return;
+    if (destination.hidden || destination.closest('[data-pattern-group][hidden]')) {
+      search.value = '';
+      filter();
+    }
+    if (destination.matches('.pattern-entry')) destination.open = true;
+    destination.scrollIntoView();
+    const activeGroup = destination.closest('[data-pattern-group]')?.id || 'map';
+    for (const link of root.querySelectorAll('.pattern-sidebar a, .pattern-mobile-nav a')) {
+      if (link.hash === '#' + activeGroup) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
+    }
+  }
+
+  root.addEventListener('change', (event) => {
+    const input = event.target.closest('[data-mastered]');
+    if (!input) return;
+    if (input.checked) mastered.add(input.dataset.mastered);
+    else mastered.delete(input.dataset.mastered);
     setPreference(savedKey, JSON.stringify([...mastered]));
     updateMastery();
   });
+  search.addEventListener('input', filter);
+  let printState = new Set();
+  window.addEventListener('beforeprint', () => {
+    printState = new Set([...cards.values()].filter((card) => card.open));
+    for (const card of cards.values()) card.open = true;
+  });
+  window.addEventListener('afterprint', () => {
+    for (const card of cards.values()) card.open = printState.has(card);
+  });
   select('review-print').addEventListener('click', () => window.print());
-  setMode('explain');
+  window.addEventListener('hashchange', followHash);
   updateMastery();
+  if (location.hash) followHash();
+  else root.querySelector('.pattern-sidebar a').setAttribute('aria-current', 'location');
 }

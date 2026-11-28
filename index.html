@@ -8,8 +8,11 @@
   <title>C 语言复习手册</title>
   <link rel="stylesheet" href="styles.css">
   <script src="content.js" defer></script>
+  <script src="preferences.js" defer></script>
+  <script src="exam-practice.js" defer></script>
   <script src="exam-content.js" defer></script>
   <script src="exam.js" defer></script>
+  <script src="review-topics.js" defer></script>
   <script src="review.js" defer></script>
   <script src="library.js" defer></script>
   <script src="app.js" defer></script>
@@ -20,13 +23,16 @@
     <div class="top-inner">
       <button class="icon-button mobile-menu" id="menu-button" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="打开章节目录">☰</button>
       <a class="brand" href="#home"><span class="brand-mark" aria-hidden="true">C.</span><span>C 语言复习手册</span></a>
-      <nav class="top-nav" aria-label="快速入口">
-        <a href="#patterns/map" data-nav="patterns">题型复习</a>
-        <a href="#home/course-guide" data-nav="notes">系统讲义</a>
-        <a href="#exam/quiz" data-nav="exam">考试自测</a>
+      <nav class="top-nav" aria-label="主导航">
+        <details class="top-catalog" id="top-catalog">
+          <summary id="top-catalog-label">知识目录</summary>
+          <div class="catalog-menu" id="catalog-menu"></div>
+        </details>
+        <a href="review.html">题型复习</a>
+        <a href="exam.html" data-nav="exam">考试自测</a>
       </nav>
       <div class="top-actions">
-        <button class="search-trigger" id="search-button" type="button"><span aria-hidden="true">⌕</span> <span>搜索</span><kbd>/</kbd></button>
+        <button class="search-trigger" id="search-button" type="button" aria-label="搜索"><span aria-hidden="true">⌕</span> <span>搜索</span><kbd>/</kbd></button>
         <button class="icon-button" id="theme-button" type="button" aria-label="切换深色模式" aria-pressed="false">◐</button>
         <a class="github-link" href="https://github.com/MinnerLee/c-review-notes">GitHub</a>
       </div>

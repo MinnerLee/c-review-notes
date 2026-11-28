@@ -1,0 +1,58 @@
+#main.pattern-page { width: min(100% - 2.4rem, 1270px); margin-inline: auto; }
+.pattern-layout { display: grid; grid-template-columns: 205px minmax(0, 1fr); gap: clamp(1rem, 3vw, 2rem); }
+.pattern-sidebar { position: sticky; top: 5rem; align-self: start; }
+.pattern-sidebar nav, .pattern-mobile-nav nav { display: grid; gap: .25rem; }
+.pattern-sidebar a, .pattern-mobile-nav a { display: block; padding: .48rem .65rem; border-radius: 5px; font-size: .91rem; }
+.pattern-sidebar a[aria-current], .pattern-mobile-nav a[aria-current], .pattern-sidebar a:hover { background: var(--accent-soft); }
+.pattern-sidebar a:first-child { font-weight: 750; }
+.pattern-page [id] { scroll-margin-top: 5rem; }
+.pattern-guide { min-width: 0; }
+.pattern-header .lede { max-width: 68ch; }
+.pattern-overview { display: flex; flex-wrap: wrap; gap: .42rem 1.1rem; align-items: baseline; margin: .85rem 0 1rem; color: var(--muted); font-size: .88rem; }
+.pattern-overview strong { font-size: 1.15rem; color: var(--ink); margin-right: .1rem; }
+.pattern-overview #mastery-count { margin-left: auto; }
+.pattern-search { display: flex; align-items: center; flex: 1 1 19rem; min-width: 0; gap: .55rem; font-weight: 650; }
+.pattern-search input { flex: 1; width: 100%; min-width: 0; min-height: 40px; font: inherit; font-weight: 400; padding: .45rem .55rem; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--ink); }
+.review-toolbar #pattern-results { margin: 0; flex-basis: 100%; }
+.review-toolbar #pattern-results:empty, .pattern-mobile-nav { display: none; }
+.pattern-group > header { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; padding-top: 1.25rem; }
+.pattern-group > header h2 { margin: 0; border: 0; padding: 0; font-size: 1.27rem; }
+.pattern-group > header span, .pattern-entry-count { color: var(--muted); font-size: .82rem; white-space: nowrap; }
+.pattern-entries { display: grid; gap: .55rem; margin-top: .52rem; }
+.pattern-entry { min-width: 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.pattern-entry:nth-child(2n) { background: var(--rail); }
+.pattern-entry summary { position: relative; list-style: none; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: .55rem; align-items: baseline; row-gap: .15rem; padding: .74rem 2rem .74rem .85rem; }
+.pattern-entry summary::-webkit-details-marker { display: none; }
+.pattern-entry summary::after { content: '▾'; position: absolute; top: .77rem; right: .8rem; color: var(--accent); }
+.pattern-entry[open] summary::after { content: '▴'; }
+.pattern-entry[open] summary { border-bottom: 1px solid var(--line); background: var(--accent-soft); }
+.pattern-entry-title { color: var(--accent); font-size: 1rem; }
+.pattern-entry-cue, .pattern-entry .review-card-method { grid-column: 1 / -1; font-weight: 400; font-size: .88rem; }
+.pattern-body { padding: .65rem .88rem .9rem; overflow-wrap: anywhere; }
+.pattern-example h3, .pattern-questions h3 { margin-block: .75rem .3rem; font-size: 1rem; }
+.pattern-questions { padding-top: .4rem; border-top: 1px solid var(--line); }
+.pattern-questions h3 span { color: var(--muted); font-size: .81rem; margin-left: .35rem; font-weight: 500; }
+.pattern-questions ul { list-style: none; padding-left: 0; display: grid; gap: .32rem; }
+.pattern-questions li { padding: .32rem .45rem; border-bottom: 1px solid var(--line); }
+.pattern-questions small { display: block; color: var(--muted); }
+.pattern-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .45rem .85rem; margin-top: .75rem; font-size: .88rem; }
+@media (max-width: 900px) {
+  #main.pattern-page { width: min(100% - 1.6rem, 760px); }
+  .pattern-layout { display: block; }
+  .pattern-sidebar { display: none; }
+  .pattern-mobile-nav { display: block; margin-top: .6rem; }
+  .pattern-mobile-nav nav { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); padding-top: .5rem; }
+  .pattern-page [id] { scroll-margin-top: 7rem; }
+}
+@media (max-width: 430px) {
+  .pattern-entry summary { padding-inline-start: .55rem; padding-inline-end: 1.65rem; }
+  .pattern-entry-count { font-size: .73rem; }
+  .pattern-overview #mastery-count { margin-left: 0; }
+}
+@media print {
+  #main.pattern-page { width: 100%; }
+  .pattern-layout { display: block; }
+  .pattern-sidebar, .pattern-mobile-nav, .pattern-footer, .pattern-questions .button { display: none !important; }
+  .pattern-entry { border-radius: 0; }
+  .pattern-entry h3, .pattern-entry summary { break-after: avoid; }
+}

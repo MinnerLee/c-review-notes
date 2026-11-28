@@ -7,9 +7,22 @@ const codeBlock = (source) => '<div class="code-block"><div class="code-head"><s
 const tree = (source) => '<pre class="tree">' + htmlEscape(source.trim()) + '</pre>';
 const lesson = (id, title, body) => ({ id, title, body });
 const lessonGroups = [
-  { title: '语言基础', chapters: ['basics', 'io', 'arrays', 'pointers', 'functions'] },
-  { title: '算法专题', chapters: ['recursion', 'bits', 'primes', 'grid'] },
-  { title: '考前复习', chapters: ['exam'] }
+  { id: 'getting-started', title: '课程入门与编译', summary: '先了解课程，再跑通第一个 C 程序。',
+    chapters: ['notes-course-intro', 'notes-lecture-1', 'notes-toolchain'] },
+  { id: 'language', title: '类型、表达式与控制流', summary: '数制、补码、运算规则、分支与循环。',
+    chapters: ['basics', 'notes-language', 'notes-lecture-2', 'bits'] },
+  { id: 'input-output', title: '输入输出与字符串', summary: '格式串、整行读取、字符数组和字符串函数。',
+    chapters: ['io', 'notes-streams', 'notes-strings'] },
+  { id: 'array-data', title: '数组、矩阵与结构体', summary: '一维与二维数组、排序查找、PTA 题解和记录建模。',
+    chapters: ['arrays', 'notes-array-course', 'notes-array-patterns', 'notes-arrays', 'notes-records'] },
+  { id: 'functions-memory', title: '函数、指针与内存', summary: '参数传递、活动记录、数组指针和动态分配。',
+    chapters: ['functions', 'pointers', 'notes-function-model', 'notes-memory-guide', 'notes-functions', 'notes-pointers'] },
+  { id: 'algorithm-methods', title: '迭代、枚举与状态机', summary: '从状态更新推导算法，练数位处理、质数和约瑟夫环。',
+    chapters: ['notes-methods', 'primes', 'notes-basics', 'notes-josephus'] },
+  { id: 'recursion-search', title: '递归、回溯与搜索', summary: '调用树、汉诺塔、斐波那契、迷宫和连通块。',
+    chapters: ['recursion', 'notes-recursion-course', 'notes-algorithm-guide', 'notes-recursion', 'grid', 'notes-grid'] },
+  { id: 'exam-practice', title: '题型练习与考前复习', summary: '题型地图、历年考点、上机复盘和错题自测。',
+    chapters: ['patterns', 'exam', 'notes-first-lab', 'notes-exam-guide', 'notes-exam', 'notes-index', 'notes-checks'] }
 ];
 
 const quizQuestions = [

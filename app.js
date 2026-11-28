@@ -1,52 +1,29 @@
 'use strict';
 
-const select = (id) => document.getElementById(id);
 const main = select('main');
 const sidebar = select('sidebar');
 const outline = select('outline');
 const menu = select('menu-button');
-const theme = select('theme-button');
 const dialog = select('search-dialog');
 const input = select('search-input');
 const results = select('search-results');
+const catalog = select('top-catalog');
 const reviewLessons = [...lessons, patternChapter, examChapter];
 const chapters = [...reviewLessons, ...detailedLessons];
-const courseGuide = detailedLessons.filter((chapter) => chapter.guide);
-const topicNotes = detailedLessons.filter((chapter) => !chapter.guide);
-const chapterGroups = [
-  ...lessonGroups.map((group) => group.chapters.includes('exam')
-    ? { ...group, chapters: ['patterns', ...group.chapters] } : group),
-  { title: '系统讲义', chapters: courseGuide.map((chapter) => chapter.id) },
-  { title: '专题详解', chapters: topicNotes.map((chapter) => chapter.id) }
-];
 const byId = new Map(chapters.map((chapter) => [chapter.id, chapter]));
-const relatedGuide = {
-  basics: ['toolchain', 'language', 'lecture-1', 'lecture-2', 'course-intro'],
-  io: ['streams', 'lecture-2'],
-  arrays: ['array-patterns', 'array-course', 'streams'],
-  pointers: ['memory-guide', 'records'],
-  functions: ['memory-guide', 'function-model'],
-  recursion: ['algorithm-guide', 'recursion-course', 'josephus'],
-  bits: ['language', 'algorithm-guide'],
-  primes: ['algorithm-guide'],
-  grid: ['algorithm-guide'],
-  exam: ['exam-guide', 'first-lab', 'methods', 'lecture-1', 'lecture-2']
-};
+const groupsByChapter = new Map(lessonGroups.flatMap((group) => group.chapters.map((id) => [id, group])));
+const catalogHash = (group) => '#home/topic-' + group.id;
+const chapterUrl = (id, section) => id === 'patterns'
+  ? 'review.html' + (section ? '#' + section : '')
+  : '#' + id + (section ? '/' + section : '');
+
+select('catalog-menu').innerHTML = `
+  <a class="catalog-overview" href="#home/course-guide">查看全部知识点</a>
+  <div class="catalog-topics">${lessonGroups.map((group) => `<a href="${catalogHash(group)}">
+    <strong>${group.title}</strong><span>${group.summary}</span>
+  </a>`).join('')}</div>`;
 
 const readKey = 'c-review-notes.read.v1';
-const themeKey = 'c-review-notes.theme.v1';
-const preferences = new Map();
-
-function getPreference(key) {
-  try { return preferences.get(key) ?? localStorage.getItem(key); }
-  catch { return preferences.get(key) ?? null; }
-}
-
-function setPreference(key, value) {
-  preferences.set(key, value);
-  try { localStorage.setItem(key, value); }
-  catch { /* Keep the preference for this session. */ }
-}
 
 function getProgress() {
   try {
@@ -58,19 +35,7 @@ function getProgress() {
 }
 
 const progress = getProgress();
-const systemTheme = matchMedia('(prefers-color-scheme: dark)');
-function drawTheme() {
-  const dark = (getPreference(themeKey) ?? (systemTheme.matches ? 'dark' : 'light')) === 'dark';
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  theme.setAttribute('aria-pressed', String(dark));
-  theme.setAttribute('aria-label', dark ? '切换浅色模式' : '切换深色模式');
-}
-theme.addEventListener('click', () => {
-  setPreference(themeKey, document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
-  drawTheme();
-});
-systemTheme.addEventListener('change', drawTheme);
-drawTheme();
+mountTheme();
 
 function setMenu(open) {
   sidebar.toggleAttribute('data-open', open);
@@ -78,6 +43,17 @@ function setMenu(open) {
   menu.setAttribute('aria-label', open ? '关闭章节目录' : '打开章节目录');
 }
 menu.addEventListener('click', () => setMenu(!sidebar.hasAttribute('data-open')));
+menu.addEventListener('click', () => { catalog.open = false; });
+catalog.addEventListener('toggle', () => { if (catalog.open) setMenu(false); });
+catalog.addEventListener('click', (event) => {
+  const link = event.target.closest('a');
+  if (!link) return;
+  catalog.open = false;
+  if (link.hash === location.hash) drawRoute();
+});
+document.addEventListener('click', (event) => {
+  if (catalog.open && !catalog.contains(event.target)) catalog.open = false;
+});
 sidebar.addEventListener('click', (event) => {
   if (event.target.closest('a')) setMenu(false);
 });
@@ -86,11 +62,24 @@ document.querySelector('.skip').addEventListener('click', (event) => {
   main.focus();
 });
 
-function drawSidebar(activeId) {
-  const link = (id, label) => `<a href="#${id}"${id === activeId ? ' aria-current="page"' : ''}>${label}${progress.has(id) ? '<span class="state" aria-label="已复习">✓</span>' : ''}</a>`;
+function drawSidebar(activeId, activeGroup) {
+  const opened = new Set([...sidebar.querySelectorAll('.sidebar-group[open]')].map((item) => item.dataset.group));
+  const scroll = sidebar.scrollTop;
+  const link = (id, label) => `<a href="${chapterUrl(id)}"${id === activeId ? ' aria-current="page"' : ''}>${label}${progress.has(id) ? '<span class="state" aria-label="已复习">✓</span>' : ''}</a>`;
   sidebar.innerHTML = `<nav>${link('home', '复习首页')}
-    ${chapterGroups.map((group) => `<div class="rail-label">${group.title}</div>${group.chapters.map((id) => link(id, byId.get(id).title)).join('')}`).join('')}
+    ${lessonGroups.map((group) => `<details class="sidebar-group" data-group="${group.id}"${group === activeGroup || opened.has(group.id) ? ' open' : ''}>
+      <summary>${group.title}</summary>
+      ${group.chapters.map((id) => link(id, byId.get(id).title)).join('')}
+    </details>`).join('')}
   </nav>`;
+  sidebar.scrollTop = scroll;
+  const current = sidebar.querySelector('[aria-current="page"]');
+  if (current && sidebar.clientHeight) {
+    const bounds = sidebar.getBoundingClientRect();
+    const row = current.getBoundingClientRect();
+    if (row.bottom > bounds.bottom) sidebar.scrollTop += row.bottom - bounds.bottom + 8;
+    if (row.top < bounds.top) sidebar.scrollTop += row.top - bounds.top - 8;
+  }
 }
 
 function outlineLinks(chapterId, sections) {
@@ -98,11 +87,12 @@ function outlineLinks(chapterId, sections) {
 }
 
 const homeSections = [
-  { id: 'course-guide', title: '系统讲义' },
-  { id: 'chapter-list', title: '快速复习' },
-  { id: 'detailed-library', title: '专题详解' },
+  { id: 'course-guide', title: '知识目录' },
+  ...lessonGroups.map((group) => ({ id: 'topic-' + group.id, title: group.title })),
   { id: 'quick-links', title: '常查知识点' },
 ];
+
+const oldCatalogSections = new Set(['chapter-list', 'detailed-library']);
 
 function drawHome() {
   const example = htmlEscape('#include <stdio.h>\n\nint main(void) {\n    int ch;\n    while ((ch = getchar()) != EOF)\n        putchar(ch);\n    return 0;\n}');
@@ -112,9 +102,9 @@ function drawHome() {
         <h1>C 语言<span>复习手册</span></h1>
         <p>读讲义、按题型找方法，再用自测检验。覆盖输入输出、指针、递归和历年考点。</p>
         <div class="hero-actions">
-          <a class="button primary" href="#home/course-guide">读系统讲义</a>
-          <a class="button" href="#patterns/map">按题型练习</a>
-          <a class="button" href="#exam/quiz">做考试自测</a>
+          <a class="button primary" href="#home/course-guide">浏览知识目录</a>
+          <a class="button" href="review.html">按题型复习</a>
+          <a class="button" href="exam.html">做考试自测</a>
         </div>
       </div>
       <div class="hero-example" aria-label="C 语言示例">
@@ -122,23 +112,17 @@ function drawHome() {
       </div>
     </section>
     <section class="home-section" id="course-guide">
-      <h2>系统讲义</h2>
-      <p>从编译和输入输出读到函数、递归与数组。课件讲义标注页码，第一次上机可按五道题逐题复盘。</p>
-      <div class="chapter-grid">${courseGuide.map((chapter) => `
-        <a class="chapter-card" href="#${chapter.id}"><h3>${chapter.title}${progress.has(chapter.id) ? ' ✓' : ''}</h3><p>${chapter.summary}</p></a>
-      `).join('')}</div>
-    </section>
-    <section class="home-section" id="chapter-list">
-      <h2>快速复习</h2><p class="progress-text">已复习 ${progress.size} / ${chapters.length} 章</p>
-      <div class="chapter-grid">${reviewLessons.map((chapter) => `
-        <a class="chapter-card" href="#${chapter.id}"><h3>${chapter.title}${progress.has(chapter.id) ? ' ✓' : ''}</h3><p>${chapter.summary}</p></a>
-      `).join('')}</div>
-    </section>
-    <section class="home-section" id="detailed-library">
-      <h2>专题详解</h2>
-      <p>收录 C 语言笔记中的完整章节、练习代码和递归调用图。</p>
-      <div class="chapter-grid">${topicNotes.map((chapter) => `
-        <a class="chapter-card" href="#${chapter.id}"><h3>${chapter.title}${progress.has(chapter.id) ? ' ✓' : ''}</h3><p>${chapter.summary}</p></a>
+      <h2>知识目录</h2>
+      <p class="progress-text">已复习 ${progress.size} / ${chapters.length} 章</p>
+      <div class="home-topics">${lessonGroups.map((group) => `
+        <details class="home-topic" id="topic-${group.id}">
+          <summary><span class="home-topic-title">${group.title}</span><span class="home-topic-count">${group.chapters.length} 章</span>
+            <span class="home-topic-description">${group.summary}</span></summary>
+          <ul>${group.chapters.map((id) => {
+            const chapter = byId.get(id);
+            return `<li><a href="${chapterUrl(id)}">${chapter.title}${progress.has(id) ? ' ✓' : ''}</a><p>${chapter.summary}</p></li>`;
+          }).join('')}</ul>
+        </details>
       `).join('')}</div>
     </section>
     <section class="home-section" id="quick-links">
@@ -148,28 +132,22 @@ function drawHome() {
 }
 
 function drawChapter(chapter) {
-  const collection = chapter.guide ? courseGuide : chapter.id.startsWith('notes-') ? topicNotes : reviewLessons;
+  const group = groupsByChapter.get(chapter.id);
+  const collection = group.chapters.map((id) => byId.get(id));
   const position = collection.indexOf(chapter);
   const last = collection[position - 1];
   const next = collection[position + 1];
-  const locationLabel = chapter.guide ? '<a href="#home/course-guide">系统讲义</a>'
-    : collection === topicNotes ? '<a href="#home/detailed-library">专题详解</a>'
-    : '<a href="#home">复习首页</a>';
-  const guideLinks = (relatedGuide[chapter.id] ?? []).map((id) => {
-    const item = byId.get('notes-' + id);
-    return `<a href="#${item.id}">${item.title}</a>`;
-  });
+  const locationLabel = `<a href="#home/course-guide">知识目录</a> / <a href="${catalogHash(group)}">${group.title}</a>`;
 
   main.innerHTML = `<article class="article">
     <div class="breadcrumb">${locationLabel} / ${htmlEscape(chapter.title)}</div>
     <h1>${chapter.title}</h1><p class="lede">${chapter.summary}</p>
-    ${guideLinks.length ? `<div class="related-reading"><strong>深入阅读</strong>${guideLinks.join('')}</div>` : ''}
     <details class="mobile-outline"><summary>本章目录</summary><nav aria-label="本章目录">${outlineLinks(chapter.id, chapter.sections)}</nav></details>
     <div class="article-body">${chapter.sections.map((item) => `<section id="${item.id}"><h2>${htmlEscape(item.title)}</h2>${item.body}</section>`).join('')}</div>
     <div class="article-footer">
-      ${last ? `<a href="#${last.id}">上一篇 · ${last.title}</a>` : '<a href="#home">返回首页</a>'}
+      ${last ? `<a href="${chapterUrl(last.id)}">上一篇 · ${last.title}</a>` : `<a href="${catalogHash(group)}">返回主题目录</a>`}
       <button class="button" type="button" id="mark-complete"></button>
-      ${next ? `<a href="#${next.id}">下一篇 · ${next.title}</a>` : ''}
+      ${next ? `<a href="${chapterUrl(next.id)}">下一篇 · ${next.title}</a>` : ''}
     </div>
   </article>`;
 
@@ -184,32 +162,44 @@ function drawChapter(chapter) {
     else progress.add(chapter.id);
     setPreference(readKey, JSON.stringify([...progress]));
     showProgress();
-    drawSidebar(chapter.id);
+    drawSidebar(chapter.id, group);
   });
   showProgress();
   if (chapter.id === 'recursion') mountHanoi();
-  if (chapter.id === 'patterns') mountPatternReview();
   if (chapter.id === 'exam') {
-    mountQuiz();
     mountSampleChecks(main.querySelector('.article-body'));
   }
 }
 
 let visibleChapter;
 function drawRoute() {
-  const [id, section] = location.hash.slice(1).split('/');
+  const [id, requestedSection] = location.hash.slice(1).split('/');
+  if (id === 'patterns') {
+    location.replace(chapterUrl('patterns', requestedSection));
+    return;
+  }
+  if (id === 'exam' && requestedSection === 'quiz') {
+    location.replace('exam.html');
+    return;
+  }
   const chapter = byId.get(id);
   const active = chapter?.id ?? 'home';
-  const routeGroup = active === 'exam' || active === 'patterns' ? active
-    : active.startsWith('notes-') || section === 'detailed-library' || section === 'course-guide' ? 'notes' : '';
+  const section = active === 'home' && oldCatalogSections.has(requestedSection) ? 'course-guide' : requestedSection;
+  const activeGroup = chapter ? groupsByChapter.get(active) : lessonGroups.find((group) => 'topic-' + group.id === section);
+  const routeGroup = active === 'exam' ? active : '';
+  select('top-catalog-label').toggleAttribute('data-current', !routeGroup && Boolean(chapter || activeGroup || section === 'course-guide'));
+  for (const link of select('catalog-menu').querySelectorAll('a')) {
+    if (activeGroup && link.hash === catalogHash(activeGroup)) link.setAttribute('aria-current', 'location');
+    else link.removeAttribute('aria-current');
+  }
   document.querySelectorAll('.top-nav a').forEach((link) => {
     if (link.dataset.nav === routeGroup) link.setAttribute('aria-current', 'true');
     else link.removeAttribute('aria-current');
   });
   document.title = chapter ? chapter.title + ' · C 语言复习手册' : 'C 语言复习手册';
   const sections = chapter?.sections ?? homeSections;
+  if (active !== visibleChapter || active === 'home') drawSidebar(active, activeGroup);
   if (active !== visibleChapter) {
-    drawSidebar(active);
     if (chapter) drawChapter(chapter);
     else drawHome();
     outline.innerHTML = `<div class="outline-label">本页内容</div><nav>${outlineLinks(active, sections)}</nav>`;
@@ -221,10 +211,9 @@ function drawRoute() {
     else link.removeAttribute('aria-current');
   });
   setMenu(false);
+  catalog.open = false;
   const destination = section && select(section);
-  if (active === 'patterns' && destination && section !== 'map') {
-    main.querySelector('.article[data-review-mode="reference"] [data-review-mode="explain"]')?.click();
-  }
+  if (destination?.matches('.home-topic')) destination.open = true;
   if (destination && main.contains(destination)) destination.scrollIntoView();
   else window.scrollTo(0, 0);
 }
@@ -297,14 +286,16 @@ function plainText(html) {
   template.innerHTML = html;
   return template.content.textContent.trim().replace(/\s+/g, ' ');
 }
-const searchIndex = chapters.flatMap((chapter) => [
-  { url: '#' + chapter.id, title: chapter.title, subtitle: chapter.summary, text: chapter.summary },
+const searchIndex = lessonGroups.map((group) => ({
+  url: catalogHash(group), title: group.title, subtitle: '知识目录', text: group.summary, chapterId: 'home'
+})).concat(chapters.flatMap((chapter) => [
+  { url: chapterUrl(chapter.id), title: chapter.title, subtitle: chapter.summary, text: chapter.summary },
   ...chapter.sections.flatMap((item) => [{
-    url: '#' + chapter.id + '/' + item.id, title: item.title, subtitle: chapter.title, text: plainText(item.body)
+    url: chapterUrl(chapter.id, item.id), title: item.title, subtitle: chapter.title, text: plainText(item.body)
   }, ...(item.subsections ?? []).map((nested) => ({
-    url: '#' + chapter.id + '/' + nested.id, title: nested.title, subtitle: chapter.title + ' · ' + item.title, text: ''
+    url: chapterUrl(chapter.id, nested.id), title: nested.title, subtitle: chapter.title + ' · ' + item.title, text: ''
   }))])
-].map((item) => ({ ...item, chapterId: chapter.id })));
+].map((item) => ({ ...item, chapterId: chapter.id }))));
 
 function searchSnippet(item, words) {
   const source = item.text || item.subtitle;
@@ -348,9 +339,8 @@ select('search-scope').addEventListener('change', drawSearch);
 results.addEventListener('click', (event) => {
   const target = event.target.closest('a');
   if (!target) return;
-  if (target.hash.startsWith('#patterns/')) main.querySelector('[data-review-mode="explain"]')?.click();
   dialog.close();
-  if (target.hash === location.hash) drawRoute();
+  if (target.pathname === location.pathname && target.hash === location.hash) drawRoute();
 });
 input.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') results.querySelector('a')?.click();
@@ -360,7 +350,10 @@ input.addEventListener('keydown', (event) => {
   }
 });
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !dialog.open && sidebar.hasAttribute('data-open')) {
+  if (event.key === 'Escape' && !dialog.open && catalog.open) {
+    catalog.open = false;
+    select('top-catalog-label').focus();
+  } else if (event.key === 'Escape' && !dialog.open && sidebar.hasAttribute('data-open')) {
     setMenu(false);
     menu.focus();
   }

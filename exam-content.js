@@ -69,11 +69,24 @@ const newExamQuestions = [
   id, source, stage: source === 'mid' ? 'midterm' : 'final', type, prompt, choices, reason, correct
 }));
 
+const originalQuestionTopics = [
+  'computer', 'language', 'computer', 'strings', 'strings', 'language', 'language', 'language',
+  'algorithms', 'memory', 'memory', 'language'
+];
+const recollectionTopics = {
+  radix: 'language', interval: 'language', iterate: 'algorithms', returns: 'memory',
+  'second-max': 'arrays', 'repeated-factors': 'algorithms', complement: 'language',
+  subtraction: 'language', osi: 'computer', architecture: 'computer', 'row-pointer': 'memory',
+  'string-terminator': 'strings', 'struct-equality': 'arrays', 'void-pointer': 'memory',
+  'static-duration': 'memory', 'pool-negative': 'arrays', discount: 'language',
+  goldbach: 'algorithms', average: 'arrays', ordering: 'arrays'
+};
 const examQuestions = [
   ...quizQuestions.map(([prompt, choices, correct, reason], index) => ({
-    id: 'review-' + index, stage: 'midterm', type: 'choice', prompt, choices, correct, reason
+    id: 'review-' + index, stage: 'midterm', topic: originalQuestionTopics[index], type: 'choice', prompt, choices, correct, reason
   })),
-  ...newExamQuestions
+  ...newExamQuestions.map((question) => ({ ...question, topic: recollectionTopics[question.id] })),
+  ...coursePracticeQuestions
 ];
 
 const extraShortAnswers = [
