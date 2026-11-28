@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import MarkdownIt from 'markdown-it';
 
 const input = new URL('../notes/c-study-notes.md', import.meta.url);
+const extension = new URL('../notes/c-course-guide.md', import.meta.url);
 const output = new URL('../library.js', import.meta.url);
 const markdown = new MarkdownIt({ html: false });
 const { escapeHtml } = markdown.utils;
@@ -16,9 +17,20 @@ const chapters = new Map([
   ['网格搜索专题', ['grid', '网格搜索详解', '油田、消除星星与连通块计数。']],
   ['课程知识点与考前复习', ['exam', '考前知识点详解', '课程复习路线、概念判读、单选与简答。']],
   ['做题检查与自测', ['checks', '做题检查与自测', '边界、自测和排错方法。']],
+  ['环境搭建与调试实训', ['toolchain', '环境搭建与调试实训', '从 Hello World 到断点、输入与链接问题。']],
+  ['数制、类型与表达式讲义', ['language', '数制、类型与表达式讲义', '按位权手算、补码、类型转换、求值和宏。']],
+  ['流、字符与字符串讲义', ['streams', '流、字符与字符串讲义', '看输入流里的字节，补上整行读入和字符串边界。']],
+  ['数组模型与 PTA 题解串讲', ['array-patterns', '数组模型与 PTA 题解串讲', '五道 PTA 数组题、二维窗口、原地写入和排序。']],
+  ['指针、函数与动态内存讲义', ['memory-guide', '指针、函数与动态内存讲义', '读声明、画内存、传地址、管理变长数据。']],
+  ['结构体、排序与标准库', ['records', '结构体、排序与标准库', '记录建模、比较函数、文件流与标准库边界。']],
+  ['递归、搜索与整数算法讲义', ['algorithm-guide', '递归、搜索与整数算法讲义', '调用树、欧几里得算法、回文、质数与连通块。']],
+  ['计算机基础与考试作答讲义', ['exam-guide', '计算机基础与考试作答讲义', '计算机组成、OS 与网络，附纸笔和机试作答步骤。']],
 ]);
 
-const source = (await readFile(input, 'utf8')).replace(/\r\n/g, '\n');
+const [studyNotes, courseGuide] = (await Promise.all([input, extension].map((file) => readFile(file, 'utf8'))))
+  .map((document) => document.replace(/\r\n/g, '\n').trimEnd());
+const guideStart = studyNotes.split('\n').length + 1;
+const source = studyNotes + '\n\n' + courseGuide.replace(/^# [^\n]+\n+/, '') + '\n';
 const lines = source.split('\n');
 const sourceAnchors = [];
 const cleanLines = lines.map((line, number) => {
@@ -73,7 +85,7 @@ for (const [index, heading] of levelTwo.entries()) {
     destinations.set(originalSlug(root.text), '#' + id + '/' + sectionId);
     addSection(sectionId, root.text, root.end, finish, subheads.filter((item) => item.start > root.start && item.start < finish));
   }
-  book.push({ id, title, summary, sections });
+  book.push({ id, title, summary, guide: heading.start >= guideStart, sections });
 }
 
 for (const [line, name] of sourceAnchors) {
@@ -89,8 +101,8 @@ const unresolved = new Set();
 markdown.renderer.rules.link_open = (list, index, options, env, renderer) => {
   const token = list[index];
   const href = token.attrGet('href');
-  if (href?.startsWith('#')) {
-    const key = decodeURIComponent(href.slice(1));
+  if (href?.startsWith('#') || href?.startsWith('c-study-notes.md#')) {
+    const key = decodeURIComponent(href.slice(href.indexOf('#') + 1));
     if (destinations.has(key)) token.attrSet('href', destinations.get(key));
     else unresolved.add(key);
   } else if (href && !href.startsWith('https://')) {
@@ -157,8 +169,8 @@ markdown.renderer.rules.fence = (list, index) => {
 markdown.renderer.rules.table_open = () => '<div class="table-wrap"><table>\n';
 markdown.renderer.rules.table_close = () => '</table></div>\n';
 
-const library = book.map(({ id, title, summary, sections }) => ({
-  id, title, summary, sections: sections.map(({ id: sectionId, title: sectionTitle, start, finish, subsectionEntries }) => ({
+const library = book.map(({ id, title, summary, guide, sections }) => ({
+  id, title, summary, ...(guide ? { guide } : {}), sections: sections.map(({ id: sectionId, title: sectionTitle, start, finish, subsectionEntries }) => ({
     id: sectionId,
     title: sectionTitle,
     subsections: subsectionEntries.map(({ id, title }) => ({ id, title })),

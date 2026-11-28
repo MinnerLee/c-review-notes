@@ -11,11 +11,26 @@ const input = select('search-input');
 const results = select('search-results');
 const reviewLessons = [...lessons, examChapter];
 const chapters = [...reviewLessons, ...detailedLessons];
+const courseGuide = detailedLessons.filter((chapter) => chapter.guide);
+const topicNotes = detailedLessons.filter((chapter) => !chapter.guide);
 const chapterGroups = [
   ...lessonGroups,
-  { title: '专题详解', chapters: detailedLessons.map((chapter) => chapter.id) }
+  { title: '系统讲义', chapters: courseGuide.map((chapter) => chapter.id) },
+  { title: '专题详解', chapters: topicNotes.map((chapter) => chapter.id) }
 ];
 const byId = new Map(chapters.map((chapter) => [chapter.id, chapter]));
+const relatedGuide = {
+  basics: ['toolchain', 'language'],
+  io: ['streams'],
+  arrays: ['array-patterns', 'streams'],
+  pointers: ['memory-guide', 'records'],
+  functions: ['memory-guide'],
+  recursion: ['algorithm-guide'],
+  bits: ['language', 'algorithm-guide'],
+  primes: ['algorithm-guide'],
+  grid: ['algorithm-guide'],
+  exam: ['exam-guide']
+};
 
 const readKey = 'c-review-notes.read.v1';
 const themeKey = 'c-review-notes.theme.v1';
@@ -82,6 +97,7 @@ function outlineLinks(chapterId, sections) {
 }
 
 const homeSections = [
+  { id: 'course-guide', title: '系统讲义' },
   { id: 'chapter-list', title: '快速复习' },
   { id: 'detailed-library', title: '专题详解' },
   { id: 'quick-links', title: '常查知识点' },
@@ -95,7 +111,7 @@ function drawHome() {
         <h1>C 语言<span>复习手册</span></h1>
         <p>从输入输出复习到指针、递归和算法。读完一个知识点，就用代码例子或自测检查理解。</p>
         <div class="hero-actions">
-          <a class="button primary" href="#basics">开始复习</a>
+          <a class="button primary" href="#home/course-guide">读系统讲义</a>
           <a class="button" href="#home/detailed-library">查专题详解</a>
           <a class="button" href="#exam/quiz">做考试自测</a>
         </div>
@@ -103,6 +119,13 @@ function drawHome() {
       <div class="hero-example" aria-label="C 语言示例">
         <div class="hero-example-label">echo.c</div><pre><code>${example}</code></pre>
       </div>
+    </section>
+    <section class="home-section" id="course-guide">
+      <h2>系统讲义</h2>
+      <p>从编译和输入输出读到指针、递归与考试作答。每章有手算例子、常见错误和原题入口。</p>
+      <div class="chapter-grid">${courseGuide.map((chapter) => `
+        <a class="chapter-card" href="#${chapter.id}"><h3>${chapter.title}${progress.has(chapter.id) ? ' ✓' : ''}</h3><p>${chapter.summary}</p></a>
+      `).join('')}</div>
     </section>
     <section class="home-section" id="chapter-list">
       <h2>快速复习</h2><p class="progress-text">已复习 ${progress.size} / ${chapters.length} 章</p>
@@ -113,7 +136,7 @@ function drawHome() {
     <section class="home-section" id="detailed-library">
       <h2>专题详解</h2>
       <p>收录 C 语言笔记中的完整章节、练习代码和递归调用图。</p>
-      <div class="chapter-grid">${detailedLessons.map((chapter) => `
+      <div class="chapter-grid">${topicNotes.map((chapter) => `
         <a class="chapter-card" href="#${chapter.id}"><h3>${chapter.title}${progress.has(chapter.id) ? ' ✓' : ''}</h3><p>${chapter.summary}</p></a>
       `).join('')}</div>
     </section>
@@ -124,16 +147,22 @@ function drawHome() {
 }
 
 function drawChapter(chapter) {
-  const collection = chapter.id.startsWith('notes-') ? detailedLessons : reviewLessons;
+  const collection = chapter.guide ? courseGuide : chapter.id.startsWith('notes-') ? topicNotes : reviewLessons;
   const position = collection.indexOf(chapter);
   const last = collection[position - 1];
   const next = collection[position + 1];
-  const locationLabel = collection === detailedLessons
-    ? '<a href="#home/detailed-library">专题详解</a>' : '<a href="#home">复习首页</a>';
+  const locationLabel = chapter.guide ? '<a href="#home/course-guide">系统讲义</a>'
+    : collection === topicNotes ? '<a href="#home/detailed-library">专题详解</a>'
+    : '<a href="#home">复习首页</a>';
+  const guideLinks = (relatedGuide[chapter.id] ?? []).map((id) => {
+    const item = byId.get('notes-' + id);
+    return `<a href="#${item.id}">${item.title}</a>`;
+  });
 
   main.innerHTML = `<article class="article">
     <div class="breadcrumb">${locationLabel} / ${htmlEscape(chapter.title)}</div>
     <h1>${chapter.title}</h1><p class="lede">${chapter.summary}</p>
+    ${guideLinks.length ? `<div class="related-reading"><strong>深入阅读</strong>${guideLinks.join('')}</div>` : ''}
     <details class="mobile-outline"><summary>本章目录</summary><nav aria-label="本章目录">${outlineLinks(chapter.id, chapter.sections)}</nav></details>
     <div class="article-body">${chapter.sections.map((item) => `<section id="${item.id}"><h2>${htmlEscape(item.title)}</h2>${item.body}</section>`).join('')}</div>
     <div class="article-footer">
@@ -169,7 +198,7 @@ function drawRoute() {
   const [id, section] = location.hash.slice(1).split('/');
   const chapter = byId.get(id);
   const active = chapter?.id ?? 'home';
-  const routeGroup = active === 'exam' ? 'exam' : active.startsWith('notes-') || section === 'detailed-library' ? 'notes' : active !== 'home' || section === 'chapter-list' ? 'review' : '';
+  const routeGroup = active === 'exam' ? 'exam' : active.startsWith('notes-') || section === 'detailed-library' || section === 'course-guide' ? 'notes' : active !== 'home' || section === 'chapter-list' ? 'review' : '';
   document.querySelectorAll('.top-nav a').forEach((link) => {
     if (link.dataset.nav === routeGroup) link.setAttribute('aria-current', 'true');
     else link.removeAttribute('aria-current');
