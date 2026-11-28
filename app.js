@@ -9,27 +9,28 @@ const theme = select('theme-button');
 const dialog = select('search-dialog');
 const input = select('search-input');
 const results = select('search-results');
-const reviewLessons = [...lessons, examChapter];
+const reviewLessons = [...lessons, patternChapter, examChapter];
 const chapters = [...reviewLessons, ...detailedLessons];
 const courseGuide = detailedLessons.filter((chapter) => chapter.guide);
 const topicNotes = detailedLessons.filter((chapter) => !chapter.guide);
 const chapterGroups = [
-  ...lessonGroups,
+  ...lessonGroups.map((group) => group.chapters.includes('exam')
+    ? { ...group, chapters: ['patterns', ...group.chapters] } : group),
   { title: '系统讲义', chapters: courseGuide.map((chapter) => chapter.id) },
   { title: '专题详解', chapters: topicNotes.map((chapter) => chapter.id) }
 ];
 const byId = new Map(chapters.map((chapter) => [chapter.id, chapter]));
 const relatedGuide = {
-  basics: ['toolchain', 'language'],
-  io: ['streams'],
-  arrays: ['array-patterns', 'streams'],
+  basics: ['toolchain', 'language', 'lecture-1', 'lecture-2', 'course-intro'],
+  io: ['streams', 'lecture-2'],
+  arrays: ['array-patterns', 'array-course', 'streams'],
   pointers: ['memory-guide', 'records'],
-  functions: ['memory-guide'],
-  recursion: ['algorithm-guide'],
+  functions: ['memory-guide', 'function-model'],
+  recursion: ['algorithm-guide', 'recursion-course', 'josephus'],
   bits: ['language', 'algorithm-guide'],
   primes: ['algorithm-guide'],
   grid: ['algorithm-guide'],
-  exam: ['exam-guide']
+  exam: ['exam-guide', 'first-lab', 'methods', 'lecture-1', 'lecture-2']
 };
 
 const readKey = 'c-review-notes.read.v1';
@@ -109,10 +110,10 @@ function drawHome() {
     <section class="hero">
       <div>
         <h1>C 语言<span>复习手册</span></h1>
-        <p>从输入输出复习到指针、递归和算法。读完一个知识点，就用代码例子或自测检查理解。</p>
+        <p>读讲义、按题型找方法，再用自测检验。覆盖输入输出、指针、递归和历年考点。</p>
         <div class="hero-actions">
           <a class="button primary" href="#home/course-guide">读系统讲义</a>
-          <a class="button" href="#home/detailed-library">查专题详解</a>
+          <a class="button" href="#patterns/map">按题型练习</a>
           <a class="button" href="#exam/quiz">做考试自测</a>
         </div>
       </div>
@@ -122,7 +123,7 @@ function drawHome() {
     </section>
     <section class="home-section" id="course-guide">
       <h2>系统讲义</h2>
-      <p>从编译和输入输出读到指针、递归与考试作答。每章有手算例子、常见错误和原题入口。</p>
+      <p>从编译和输入输出读到函数、递归与数组。课件讲义标注页码，第一次上机可按五道题逐题复盘。</p>
       <div class="chapter-grid">${courseGuide.map((chapter) => `
         <a class="chapter-card" href="#${chapter.id}"><h3>${chapter.title}${progress.has(chapter.id) ? ' ✓' : ''}</h3><p>${chapter.summary}</p></a>
       `).join('')}</div>
@@ -187,6 +188,7 @@ function drawChapter(chapter) {
   });
   showProgress();
   if (chapter.id === 'recursion') mountHanoi();
+  if (chapter.id === 'patterns') mountPatternReview();
   if (chapter.id === 'exam') {
     mountQuiz();
     mountSampleChecks(main.querySelector('.article-body'));
@@ -198,7 +200,8 @@ function drawRoute() {
   const [id, section] = location.hash.slice(1).split('/');
   const chapter = byId.get(id);
   const active = chapter?.id ?? 'home';
-  const routeGroup = active === 'exam' ? 'exam' : active.startsWith('notes-') || section === 'detailed-library' || section === 'course-guide' ? 'notes' : active !== 'home' || section === 'chapter-list' ? 'review' : '';
+  const routeGroup = active === 'exam' || active === 'patterns' ? active
+    : active.startsWith('notes-') || section === 'detailed-library' || section === 'course-guide' ? 'notes' : '';
   document.querySelectorAll('.top-nav a').forEach((link) => {
     if (link.dataset.nav === routeGroup) link.setAttribute('aria-current', 'true');
     else link.removeAttribute('aria-current');
@@ -219,6 +222,9 @@ function drawRoute() {
   });
   setMenu(false);
   const destination = section && select(section);
+  if (active === 'patterns' && destination && section !== 'map') {
+    main.querySelector('.article[data-review-mode="reference"] [data-review-mode="explain"]')?.click();
+  }
   if (destination && main.contains(destination)) destination.scrollIntoView();
   else window.scrollTo(0, 0);
 }
@@ -298,7 +304,15 @@ const searchIndex = chapters.flatMap((chapter) => [
   }, ...(item.subsections ?? []).map((nested) => ({
     url: '#' + chapter.id + '/' + nested.id, title: nested.title, subtitle: chapter.title + ' · ' + item.title, text: ''
   }))])
-]);
+].map((item) => ({ ...item, chapterId: chapter.id })));
+
+function searchSnippet(item, words) {
+  const source = item.text || item.subtitle;
+  const offsets = words.map((word) => source.toLowerCase().indexOf(word)).filter((index) => index >= 0);
+  const start = offsets.length ? Math.max(0, Math.min(...offsets) - 15) : 0;
+  const chunk = source.slice(start, start + 76);
+  return (start ? '…' : '') + chunk + (start + chunk.length < source.length ? '…' : '');
+}
 
 function drawSearch() {
   const query = input.value.trim().toLowerCase();
@@ -307,16 +321,21 @@ function drawSearch() {
     return;
   }
   const words = query.split(/\s+/);
+  const thisChapter = select('search-scope').value === 'chapter';
   const matches = searchIndex.filter((item) => {
     const haystack = (item.title + ' ' + item.subtitle + ' ' + item.text).toLowerCase();
-    return words.every((word) => haystack.includes(word));
+    return (!thisChapter || item.chapterId === visibleChapter) && words.every((word) => haystack.includes(word));
   }).sort((a, b) => Number(b.title.toLowerCase().includes(query)) - Number(a.title.toLowerCase().includes(query)));
 
   results.innerHTML = matches.length
-    ? matches.slice(0, 12).map((item) => `<a class="search-result" href="${item.url}">${htmlEscape(item.title)}<small>${htmlEscape(item.subtitle)}</small></a>`).join('')
+    ? `<p class="search-message">找到 ${matches.length} 项${matches.length > 12 ? '，显示前 12 项' : ''}</p>` +
+      matches.slice(0, 12).map((item) => `<a class="search-result" href="${item.url}">${htmlEscape(item.title)}<small>${htmlEscape(item.subtitle)}</small><span class="search-snippet">${htmlEscape(searchSnippet(item, words))}</span></a>`).join('')
     : '<p class="search-message">没有找到匹配的知识点。</p>';
 }
 function openSearch() {
+  const scope = select('search-scope');
+  scope.options[1].disabled = visibleChapter === 'home';
+  if (scope.options[1].disabled) scope.value = 'all';
   drawSearch();
   if (!dialog.open) dialog.showModal();
   input.focus();
@@ -325,8 +344,13 @@ function openSearch() {
 select('search-button').addEventListener('click', openSearch);
 select('search-close').addEventListener('click', () => dialog.close());
 input.addEventListener('input', drawSearch);
+select('search-scope').addEventListener('change', drawSearch);
 results.addEventListener('click', (event) => {
-  if (event.target.closest('a')) dialog.close();
+  const target = event.target.closest('a');
+  if (!target) return;
+  if (target.hash.startsWith('#patterns/')) main.querySelector('[data-review-mode="explain"]')?.click();
+  dialog.close();
+  if (target.hash === location.hash) drawRoute();
 });
 input.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') results.querySelector('a')?.click();
@@ -348,4 +372,13 @@ document.addEventListener('keydown', (event) => {
 });
 
 window.addEventListener('hashchange', drawRoute);
+let printDetails = [];
+window.addEventListener('beforeprint', () => {
+  printDetails = [...main.querySelectorAll('details:not([open]):not(.mobile-outline)')];
+  for (const detail of printDetails) detail.open = true;
+});
+window.addEventListener('afterprint', () => {
+  for (const detail of printDetails) detail.open = false;
+  printDetails = [];
+});
 drawRoute();

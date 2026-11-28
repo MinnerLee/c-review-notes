@@ -10,6 +10,7 @@
   <script src="content.js" defer></script>
   <script src="exam-content.js" defer></script>
   <script src="exam.js" defer></script>
+  <script src="review.js" defer></script>
   <script src="library.js" defer></script>
   <script src="app.js" defer></script>
 </head>
@@ -20,7 +21,7 @@
       <button class="icon-button mobile-menu" id="menu-button" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="打开章节目录">☰</button>
       <a class="brand" href="#home"><span class="brand-mark" aria-hidden="true">C.</span><span>C 语言复习手册</span></a>
       <nav class="top-nav" aria-label="快速入口">
-        <a href="#home/chapter-list" data-nav="review">快速复习</a>
+        <a href="#patterns/map" data-nav="patterns">题型复习</a>
         <a href="#home/course-guide" data-nav="notes">系统讲义</a>
         <a href="#exam/quiz" data-nav="exam">考试自测</a>
       </nav>
@@ -42,6 +43,9 @@
       <input id="search-input" type="search" placeholder="搜索 fgets、指针、汉诺塔…" autocomplete="off">
       <button class="icon-button" id="search-close" type="button" aria-label="关闭搜索">×</button>
     </div>
+    <label class="search-scope" for="search-scope">搜索范围
+      <select id="search-scope"><option value="all">全站</option><option value="chapter">当前章</option></select>
+    </label>
     <div id="search-results" class="search-results" aria-live="polite"></div>
   </dialog>
   <noscript>请启用 JavaScript 以显示手册正文与练习。</noscript>
